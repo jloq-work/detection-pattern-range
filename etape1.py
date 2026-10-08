@@ -1,4 +1,4 @@
-"""Étape 1 : récupération du cours de clôture journalier ajusté de Veolia SA (VIE.PA)."""
+"""Étape 1 : récupération des cours de clôture, haut et bas journaliers ajustés de Veolia SA (VIE.PA)."""
 
 from pathlib import Path
 
@@ -12,11 +12,14 @@ FICHIER_CSV = DOSSIER_DATA / "veolia_cours.csv"
 
 
 def recuperer_cours() -> "pd.DataFrame":
-    # auto_adjust=True : la colonne Close est ajustée des dividendes et splits
+    # auto_adjust=True : les colonnes Close, High et Low sont ajustées des dividendes et splits
     df = yf.download(TICKER, start=DATE_DEBUT, end=DATE_FIN, auto_adjust=True, progress=False)
     if df.empty:
         raise RuntimeError(f"Aucune donnée récupérée pour {TICKER}")
-    cours = df["Close"][TICKER].rename("cloture_ajustee").to_frame()
+    cours = df.xs(TICKER, axis=1, level="Ticker")[["Close", "High", "Low"]].rename(
+        columns={"Close": "cloture_ajustee", "High": "haut_ajuste", "Low": "bas_ajuste"}
+    )
+    cours.columns.name = None
     cours.index.name = "date"
     return cours.dropna()
 
