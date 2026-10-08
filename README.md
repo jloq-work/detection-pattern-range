@@ -1,4 +1,4 @@
-Projet test: système d'aide à la prise de position sur actions françaises (position longue uniquement) 
+## Projet test: système d'aide à la prise de position sur actions françaises (position longue uniquement) 
 L'idée est de tester sur l'action française Veolia SA la détection de pattern de range sur la période avril 2020 à septembre 2026.
 La détection est réalisée par clusterisation sur des fenêtres glissantes de 2 mois de cotations.
 3 clusters K-means sont créés avec 3 features: la pente de la tendance, la volatilité normalisée, le ratio de consolidation des prix
