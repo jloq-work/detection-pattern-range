@@ -6,6 +6,7 @@
 ## étape 1:
 - récupérer l'action Veolia SA (symbole Yahoo: VIE.PA) via Yahoo finance et l'utilisation de la library yfinance
 - récupérer le cours de clôture journalier ajusté
+- récupérer également les cours bas et haut journaliers ajustés (nécessaires au calcul de l'ATR à l'étape 2)
 - récupérer le cours depuis le 01/04/2020 jusqu'au 30/09/2026
 - vérification: stockage du cours dans un fichier csv dans le sous dossier data_test, séparateur ";"
 
@@ -13,6 +14,9 @@
 - à partir de ce cours: créer des variables dans un dataframe
 - variable 1: un identifiant qui représente une fenêtre glissante de 44 séances boursières, pas de la fenêtre: elle avance d'une séance boursière à la fois
 - variable 2: un premier feature, le coefficient de la tendance de la regression linéaire du logarithme du cours de l'action sur la fenêtre de 44 séances, une valeur par identifiant donc
-- variable 3: un second feature, la volatilité du cours de l'action sur la fenêtre de 44 séances, une valeur par identifiant donc. Pour le calcul de la volatilité, donne moi plusieurs options de calcul possibles
+- variable 3: un second feature, la volatilité du cours de l'action sur la fenêtre de 44 séances, une valeur par identifiant donc. Option retenue pour le calcul de la volatilité: option E, ATR normalisé par le cours
+  - true range journalier: max(haut - bas, |haut - clôture de la veille|, |bas - clôture de la veille|)
+  - ATR: moyenne des true range sur la fenêtre de 44 séances
+  - volatilité = ATR / cours de clôture moyen de la fenêtre (même dénominateur que le ratio de consolidation)
 - variable 4: un troisième feature, le ratio de consolidation du cours de l'action sur la fenêtre de 44 séances, une valeur par identifiant donc. Pour calculer ce ratio, applique la formule suivante: (cours max - cours min)/cours moyen 
 - vérification: stockage du dataframe dans un fichier csv dans le sous dossier data_test, séparateur ";"
