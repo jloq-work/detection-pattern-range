@@ -12,8 +12,12 @@ Limite connue et acceptée : le cluster « range » regroupe aussi les tendances
 
 from pathlib import Path
 
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.collections import LineCollection
+from matplotlib.lines import Line2D
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import RobustScaler
@@ -29,6 +33,15 @@ DOSSIER_DATA = Path(__file__).parent / "data_test"
 FICHIER_COURS = DOSSIER_DATA / "veolia_cours.csv"
 FICHIER_FEATURES = DOSSIER_DATA / "veolia_features.csv"
 FICHIER_CLUSTERS = DOSSIER_DATA / "veolia_clusters.csv"
+FICHIER_GRAPHIQUE = DOSSIER_DATA / "veolia_clusters.png"
+
+COULEURS_REGIMES = {"range": "#2a78d6", "baissiere": "#eb6834", "haussiere": "#1baf7a"}
+LIBELLES_REGIMES = {"haussiere": "Tendance haussière", "range": "Range", "baissiere": "Tendance baissière"}
+COULEUR_SANS_CLUSTER = "#c3c2b7"
+ENCRE_PRINCIPALE = "#0b0b0b"
+ENCRE_DISCRETE = "#898781"
+GRILLE = "#e1e0d9"
+AXE = "#c3c2b7"
 
 
 def preparer_features(features: pd.DataFrame) -> np.ndarray:
@@ -65,6 +78,45 @@ def resume(resultat: pd.DataFrame) -> None:
     print(pd.crosstab(resultat["date_fin"].dt.year, resultat["regime"], normalize="index").round(2).to_string())
 
 
+def tracer_graphique(sortie: pd.DataFrame) -> None:
+    """Cours de clôture ajusté, chaque segment coloré selon le régime de la fenêtre se terminant à sa séance d'arrivée."""
+    dates = mdates.date2num(sortie.index.to_pydatetime())
+    cloture = sortie["cloture_ajustee"].to_numpy()
+    points = np.column_stack([dates, cloture])
+    segments = np.stack([points[:-1], points[1:]], axis=1)
+    couleurs = sortie["regime"].iloc[1:].map(COULEURS_REGIMES).fillna(COULEUR_SANS_CLUSTER).to_list()
+
+    fig, ax = plt.subplots(figsize=(13, 6), dpi=120)
+    ax.add_collection(LineCollection(segments, colors=couleurs, linewidths=2, capstyle="round", joinstyle="round"))
+
+    legende = [Line2D([], [], color=COULEURS_REGIMES[r], linewidth=2.5, label=LIBELLES_REGIMES[r])
+               for r in LIBELLES_REGIMES]
+    legende.append(Line2D([], [], color=COULEUR_SANS_CLUSTER, linewidth=2.5, label="Sans cluster (44 premières séances)"))
+    ax.legend(handles=legende, loc="upper left", frameon=False, fontsize=10, labelcolor=ENCRE_PRINCIPALE)
+
+    ax.set_title("Veolia SA (VIE.PA) : cours de clôture ajusté coloré par régime K-means "
+                 "(fenêtre de 44 séances rattachée à sa dernière séance)",
+                 loc="left", fontsize=12, color=ENCRE_PRINCIPALE, pad=12)
+    ax.set_ylabel("€", color=ENCRE_DISCRETE, rotation=0, labelpad=12)
+    ax.set_xlim(dates[0], dates[-1] + 30)
+    ax.set_ylim(cloture.min() * 0.95, cloture.max() * 1.05)
+    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=[4, 7, 10]))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    ax.grid(axis="y", color=GRILLE, linewidth=1)
+    ax.grid(axis="x", which="major", color=GRILLE, linewidth=1)
+    ax.tick_params(colors=ENCRE_DISCRETE, length=0)
+    ax.tick_params(axis="x", which="minor", length=3, color=AXE)
+    for cote in ["top", "right", "left"]:
+        ax.spines[cote].set_visible(False)
+    ax.spines["bottom"].set_color(AXE)
+
+    fig.tight_layout()
+    fig.savefig(FICHIER_GRAPHIQUE)
+    plt.close(fig)
+    print(f"Graphique enregistré dans {FICHIER_GRAPHIQUE}")
+
+
 def main() -> None:
     cours = pd.read_csv(FICHIER_COURS, sep=";", parse_dates=["date"], index_col="date")
     features = pd.read_csv(FICHIER_FEATURES, sep=";", parse_dates=["date_debut", "date_fin"])
@@ -80,6 +132,7 @@ def main() -> None:
     sortie.to_csv(FICHIER_CLUSTERS, sep=";", date_format="%Y-%m-%d")
     print(f"\n{len(sortie)} séances enregistrées dans {FICHIER_CLUSTERS} "
           f"({sortie['cluster'].isna().sum()} premières séances sans cluster)")
+    tracer_graphique(sortie)
 
 
 if __name__ == "__main__":
