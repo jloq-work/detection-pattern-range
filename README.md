@@ -21,6 +21,8 @@
 - vérification: stockage du dataframe dans un fichier csv dans le sous dossier data_test, séparateur ";"
 
 ## étape 3:
-- standardisation et normalisation des 3 features: faire des propositions
-- recherche de clusters via la méthode Kmeans, avec K=3 (range, tendance haussière, tendance baissière): discussions autour du choix des hyperparamètres
-- vérification: dans un fichier csv: cours journalier ajusté et variable identifiant les clusters, dans le sous dossier data_test, séparateur ";" 
+- mise à l'échelle des 3 features: log puis échelle robuste, c'est à dire: Log, puis (x − médiane) / écart interquartile)
+- recherche de clusters via la méthode Kmeans, avec K=3, n_init=50, random_state=0
+- nommage automatique des clusters selon la pente de leur centre (la plus faible = baissière, celle du milieu = range, la plus forte = haussière)
+- rattachement de chaque fenêtre au jour date_fin, pour ne pas utiliser d’information future
+- vérification: dans un fichier csv: cours journalier ajusté et de id_fenetre, du numéro de cluster et de son nom. Dans le sous dossier data_test, séparateur ";" 
