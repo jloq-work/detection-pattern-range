@@ -27,8 +27,8 @@
 - rattachement de chaque fenêtre au jour date_fin, pour ne pas utiliser d’information future
 - ajout d'un graphique:
   - chaque jour, le segment de cours prend la couleur du régime de la fenêtre qui se termine ce jour-là
-  - couleurs : vert pour haussière, bleu pour range, et gris pour le reste (régime baissier et pas de régime)
-  - le graphique, au format png, est stocké sous dans le dossier data_test
+  - couleurs : rouge pour baissière, bleu pour range, et gris pour le reste (régime haussier et pas de régime)
+  - le graphique, au format png, est stocké dans le dossier data_test
 - vérification: dans un fichier csv: cours journalier ajusté et de id_fenetre, du numéro de cluster et de son nom. Dans le sous dossier data_test, séparateur ";" 
 
 ## étape 4:
