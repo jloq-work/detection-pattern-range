@@ -1,4 +1,8 @@
-"""Étape 1 : récupération des cours de clôture, haut et bas journaliers ajustés de Veolia SA (VIE.PA)."""
+"""Étape 1 : récupération des cours de clôture, haut et bas journaliers ajustés et du volume de Veolia SA (VIE.PA).
+
+Le volume Yahoo des tickers .PA correspond en principe aux échanges sur Euronext Paris uniquement
+(hors autres plateformes) : à utiliser en relatif (comparé à sa moyenne) plutôt qu'en absolu.
+"""
 
 from pathlib import Path
 
@@ -16,8 +20,8 @@ def recuperer_cours() -> "pd.DataFrame":
     df = yf.download(TICKER, start=DATE_DEBUT, end=DATE_FIN, auto_adjust=True, progress=False)
     if df.empty:
         raise RuntimeError(f"Aucune donnée récupérée pour {TICKER}")
-    cours = df.xs(TICKER, axis=1, level="Ticker")[["Close", "High", "Low"]].rename(
-        columns={"Close": "cloture_ajustee", "High": "haut_ajuste", "Low": "bas_ajuste"}
+    cours = df.xs(TICKER, axis=1, level="Ticker")[["Close", "High", "Low", "Volume"]].rename(
+        columns={"Close": "cloture_ajustee", "High": "haut_ajuste", "Low": "bas_ajuste", "Volume": "volume"}
     )
     cours.columns.name = None
     cours.index.name = "date"
@@ -31,6 +35,9 @@ def main() -> None:
     print(f"{len(cours)} séances enregistrées dans {FICHIER_CSV}")
     print(f"Période : {cours.index.min().date()} -> {cours.index.max().date()}")
     print(cours.describe())
+    nb_volume_nul = int((cours["volume"] == 0).sum())
+    if nb_volume_nul:
+        print(f"Attention : {nb_volume_nul} séance(s) avec un volume nul")
 
 
 if __name__ == "__main__":
