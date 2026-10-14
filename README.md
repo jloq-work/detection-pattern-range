@@ -35,7 +35,7 @@
 
 ## étape 4: récupération des range pertinents et traçage des supports et résistances
 - fusionner les épisodes de range séparés par des interruptions (cluster=autre) d'une durée de 5 séances boursières ou moins
-- créer une nouvelle variable d'identification des range: épisode de range d'une durée minimales de 15 séances boursières
+- créer une nouvelle variable d'identification des range: épisode de range d'une durée minimale de 15 séances boursières
 - les bandes de niveaux des supports et des résistances sont calculées seulement en utilisant les séances boursières connues au moment du calcul, autrement dit les séances passées, aucune information future n'est utilisée
 - utiliser et comparer 2 méthodes pour déterminer les bandes des supports et des résistances
   - méthode 1: utilisation des quantiles, bande de support=quantiles 5 à 10% des cours bas et bande de résistance=quantile 90 à 95% des cours hauts
