@@ -40,7 +40,7 @@
 - utiliser et comparer 2 méthodes pour déterminer les bandes des supports et des résistances
   - méthode 1: utilisation des quantiles, bande de support=quantiles 5 à 10% des cours bas et bande de résistance=quantile 90 à 95% des cours hauts
   - méthode 2: point de retournements regroupés, repérer les creux et sommets locaux (un point plus bas ou plus haut que ses 3 voisins de chaque côté), regrouper ceux qui sont à moins de 0,5*ATR l'un de l'autre, et retenir les niveaux touchés au moins 2 fois
-- plan de comparaison des 2 méthodes:
-  - produire un tableau des épisodes de range retenus par méthode avec les informations suivantes: dates, durée, support et résistance selon les méthodes, nombre de contacts
-  - mesure du taux de respect pour chaque méthode: quand le cours entre dans la zone de support, part des cas où il cloture au dessus 5 et 10 séances plus tard, contre la part des cas où il casse sous la zone
-  - contrôle visuel:un graphique sur toute la période avec les zones en bandes semi transparentes
+  - plan de comparaison des 2 méthodes:
+    - produire un tableau des épisodes de range retenus par méthode avec les informations suivantes: dates, durée, support et résistance selon les méthodes, nombre de contacts
+    - mesure du taux de respect pour chaque méthode: quand le cours entre dans la zone de support, part des cas où il cloture au dessus 5 et 10 séances plus tard, contre la part des cas où il casse sous la zone
+    - contrôle visuel:un graphique sur toute la période avec les zones en bandes semi transparentes
