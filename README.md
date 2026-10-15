@@ -9,7 +9,7 @@
 - récupérer l'action Veolia SA (symbole Yahoo: VIE.PA) via Yahoo finance et l'utilisation de la library yfinance
 - récupérer le cours de clôture, le cours bas, le cours haut journaliers ajustés, le volume
 - récupérer les variables du 01/04/2020 au 30/09/2026
-- vérification et stockage des variables dans un fichier csv dans le sous dossier data_test, séparateur ";"
+- vérification et stockage des variables dans un fichier etape1.csv dans le sous dossier data_test, séparateur ";"
 
 ## étape 2: calcul des features nécessaires à la clusterisation
 - à partir des données de l'étape 1, créer des variables supplémentaires
@@ -20,9 +20,9 @@
   - ATR: moyenne des true range sur la fenêtre de 44 séances
   - volatilité = ATR / cours de clôture moyen de la fenêtre (même dénominateur que le ratio de consolidation ci dessous)
 - variable 4: un troisième feature, le ratio de consolidation du cours de l'action sur la fenêtre de 44 séances, une valeur par identifiant donc. Pour calculer ce ratio, applique la formule suivante: (cours max - cours min)/cours moyen 
-- vérification et stockage des variables créées dans le même fichier csv que celui créé à l'étape 1
+- vérification et stockage des variables créées dans un fichier etape2.csv dans le sous dossier data_test, séparateur ";"
 
-## étape 3: clusterisation et filtre des patterns de range
+## étape 3: clusterisation pour mettre en évidence les patterns de range
 - mise à l'échelle des 3 features: log puis échelle robuste, c'est à dire: Log, puis (x − médiane) / écart interquartile. Le log ne s'applique pas au feature pente qui peut être négatif
 - recherche de clusters via la méthode Kmeans, avec K=3, n_init=50, random_state=0
 - nommage automatique des clusters par pente moyenne de leurs fenêtres (la plus faible = autre, celle du milieu = range, la plus forte = autre)
@@ -31,15 +31,16 @@
   - chaque jour,uniquement pour le régime range, le segment de cours prend la couleur du régime de la fenêtre qui se termine ce jour-là
   - couleur : bleu pour range
   - le graphique, au format png, est stocké dans le dossier data_test
-- vérification et stockage des variables créées dans le même fichier csv que celui créé à l'étape 1
+- vérification et stockage des variables créées dans un fichier fichier etape3.csv dans le sous dossier data_test, séparateur ";"
 
 ## étape 4: récupération des range pertinents et traçage des supports et résistances
-- fusionner les épisodes de range séparés par des interruptions (cluster=autre) d'une durée de 5 séances boursières ou moins
-- créer une nouvelle variable d'identification des range: épisode de range d'une durée minimale de 15 séances boursières
-- les bandes de niveaux des supports et des résistances sont calculées seulement en utilisant les séances boursières connues au moment du calcul, autrement dit les séances passées, aucune information future n'est utilisée
+- n'utiliser que le passé connu: aucune information future n'est utilisée
+- fusionner les épisodes de range séparés par des interruptions (cluster=autre) d'une durée de 5 séances boursières ou moins: si le range reprend dans les 5 séances, l’épisode continue. Sinon, il est clos rétroactivement au début de l’interruption
+- créer une nouvelle variable d'identification des range: épisode de range d'une durée minimale de 15 séances boursières, range validé seulement à partir de sa 15e séance
+- période de calcul des bandes de niveaux des supports et des résistances: partir du début de l’épisode, avec au moins 15 séances et au plus les 44 dernières
 - utiliser et comparer 2 méthodes pour déterminer les bandes des supports et des résistances
   - méthode 1: utilisation des quantiles, bande de support=quantiles 5 à 10% des cours bas et bande de résistance=quantile 90 à 95% des cours hauts
-  - méthode 2: point de retournements regroupés, repérer les creux et sommets locaux (un point plus bas ou plus haut que ses 3 voisins de chaque côté), regrouper ceux qui sont à moins de 0,5*ATR l'un de l'autre, et retenir les niveaux touchés au moins 2 fois
+  - méthode 2: point de retournements regroupés, repérer les creux et sommets locaux (un point plus bas ou plus haut que ses 3 voisins de chaque côté), regrouper ceux qui sont à moins de 0,5*ATR l'un de l'autre, et retenir les niveaux touchés au moins 2 fois. Un creux ou un sommet n’est connu que 3 séances après coup. ATR calculé sur les 44 dernières séances. Règle pour choisir le support et la résistance parmi les niveaux trouvés: le niveau confirmé le plus proche sous le cours pour le support, et le plus proche au-dessus pour la résistance
   - plan de comparaison des 2 méthodes:
     - produire un tableau des épisodes de range retenus par méthode avec les informations suivantes: dates, durée, support et résistance selon les méthodes, nombre de contacts
     - mesure du taux de respect pour chaque méthode: quand le cours entre dans la zone de support, part des cas où il cloture au dessus 5 et 10 séances plus tard, contre la part des cas où il casse sous la zone
