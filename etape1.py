@@ -12,7 +12,7 @@ TICKER = "VIE.PA"
 DATE_DEBUT = "2020-04-01"
 DATE_FIN = "2026-10-01"  # borne exclusive pour yfinance -> inclut le 30/09/2026
 DOSSIER_DATA = Path(__file__).parent / "data_test"
-FICHIER_CSV = DOSSIER_DATA / "veolia_cours.csv"
+FICHIER_CSV = DOSSIER_DATA / "etape1.csv"
 
 
 def recuperer_cours() -> "pd.DataFrame":

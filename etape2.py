@@ -8,8 +8,8 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 TAILLE_FENETRE = 44
 DOSSIER_DATA = Path(__file__).parent / "data_test"
-FICHIER_COURS = DOSSIER_DATA / "veolia_cours.csv"
-FICHIER_FEATURES = DOSSIER_DATA / "veolia_features.csv"
+FICHIER_COURS = DOSSIER_DATA / "etape1.csv"
+FICHIER_FEATURES = DOSSIER_DATA / "etape2.csv"
 
 
 def true_range(cours: pd.DataFrame) -> pd.Series:

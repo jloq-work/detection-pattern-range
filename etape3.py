@@ -1,11 +1,12 @@
-"""Étape 3 : clustering K-means (K=3) des fenêtres glissantes de 44 séances de Veolia SA.
+"""Étape 3 : clustering K-means (K=3) des fenêtres glissantes de 44 séances pour mettre en évidence les patterns de range.
 
-Choix retenus (cf. diagnostic) :
+Choix retenus (cf. README) :
 - transformation log de la volatilité et du ratio de consolidation (distributions asymétriques à droite),
-  pente laissée telle quelle (symétrique, signée) ;
-- mise à l'échelle robuste (médiane / écart interquartile) des 3 features, moins sensible aux extrêmes 2020 et 2022 ;
-- K-means : K=3, init k-means++, n_init=50, random_state fixé pour la reproductibilité ;
-- nommage des clusters par la pente moyenne : la plus faible = baissière, intermédiaire = range, la plus forte = haussière ;
+  pente laissée telle quelle (peut être négative) ;
+- mise à l'échelle robuste (médiane / écart interquartile) des 3 features ;
+- K-means : K=3, init k-means++, n_init=50, random_state=0 ;
+- clusters numérotés 0, 1, 2 par pente moyenne croissante ; le cluster du milieu (1) est nommé « range »,
+  les deux autres « autre » ;
 - chaque fenêtre est rattachée à sa dernière séance (date_fin) : aucune information future n'est utilisée.
 Limite connue et acceptée : le cluster « range » regroupe aussi les tendances lentes en période de faible volatilité.
 """
@@ -27,17 +28,16 @@ N_INIT = 50
 RANDOM_STATE = 0
 FEATURES = ["pente", "volatilite_atr", "ratio_consolidation"]
 FEATURES_LOG = ["volatilite_atr", "ratio_consolidation"]
-NOMS_REGIMES = ["baissiere", "range", "haussiere"]  # par pente moyenne croissante
+NOMS_REGIMES = ["autre", "range", "autre"]  # par pente moyenne croissante
 
 DOSSIER_DATA = Path(__file__).parent / "data_test"
-FICHIER_COURS = DOSSIER_DATA / "veolia_cours.csv"
-FICHIER_FEATURES = DOSSIER_DATA / "veolia_features.csv"
-FICHIER_CLUSTERS = DOSSIER_DATA / "veolia_clusters.csv"
-FICHIER_GRAPHIQUE = DOSSIER_DATA / "veolia_clusters.png"
+FICHIER_COURS = DOSSIER_DATA / "etape1.csv"
+FICHIER_FEATURES = DOSSIER_DATA / "etape2.csv"
+FICHIER_SORTIE = DOSSIER_DATA / "etape3.csv"
+FICHIER_GRAPHIQUE = DOSSIER_DATA / "etape3.png"
 
-COULEURS_REGIMES = {"range": "#2a78d6", "baissiere": "#eb6834", "haussiere": "#1baf7a"}
-LIBELLES_REGIMES = {"haussiere": "Tendance haussière", "range": "Range", "baissiere": "Tendance baissière"}
-COULEUR_SANS_CLUSTER = "#c3c2b7"
+COULEUR_RANGE = "#2a78d6"
+COULEUR_AUTRE = "#c3c2b7"
 ENCRE_PRINCIPALE = "#0b0b0b"
 ENCRE_DISCRETE = "#898781"
 GRILLE = "#e1e0d9"
@@ -72,29 +72,32 @@ def resume(resultat: pd.DataFrame) -> None:
     print("\nCentres en unités d'origine :")
     print(centres.round(4).to_string())
 
-    blocs = (resultat["cluster"].diff() != 0).cumsum()
-    print(f"\nDurée moyenne d'un régime : {resultat.groupby(blocs).size().mean():.1f} séances")
+    blocs = (resultat["regime"] != resultat["regime"].shift()).cumsum()
+    durees = resultat.groupby(blocs).agg(regime=("regime", "first"), duree=("regime", "size"))
+    print(f"\nÉpisodes de range bruts (avant fusion et filtre de l'étape 4) : "
+          f"{(durees['regime'] == 'range').sum()}, durée moyenne "
+          f"{durees.loc[durees['regime'] == 'range', 'duree'].mean():.1f} séances")
     print("\nRépartition par année (part des fenêtres) :")
     print(pd.crosstab(resultat["date_fin"].dt.year, resultat["regime"], normalize="index").round(2).to_string())
 
 
 def tracer_graphique(sortie: pd.DataFrame) -> None:
-    """Cours de clôture ajusté, chaque segment coloré selon le régime de la fenêtre se terminant à sa séance d'arrivée."""
+    """Cours de clôture ajusté : segments en bleu lorsque la fenêtre se terminant à la séance d'arrivée est un range."""
     dates = mdates.date2num(sortie.index.to_pydatetime())
     cloture = sortie["cloture_ajustee"].to_numpy()
     points = np.column_stack([dates, cloture])
     segments = np.stack([points[:-1], points[1:]], axis=1)
-    couleurs = sortie["regime"].iloc[1:].map(COULEURS_REGIMES).fillna(COULEUR_SANS_CLUSTER).to_list()
+    est_range = (sortie["regime"].iloc[1:] == "range").to_numpy()
+    couleurs = np.where(est_range, COULEUR_RANGE, COULEUR_AUTRE)
 
     fig, ax = plt.subplots(figsize=(13, 6), dpi=120)
     ax.add_collection(LineCollection(segments, colors=couleurs, linewidths=2, capstyle="round", joinstyle="round"))
 
-    legende = [Line2D([], [], color=COULEURS_REGIMES[r], linewidth=2.5, label=LIBELLES_REGIMES[r])
-               for r in LIBELLES_REGIMES]
-    legende.append(Line2D([], [], color=COULEUR_SANS_CLUSTER, linewidth=2.5, label="Sans cluster (44 premières séances)"))
+    legende = [Line2D([], [], color=COULEUR_RANGE, linewidth=2.5, label="Range"),
+               Line2D([], [], color=COULEUR_AUTRE, linewidth=2.5, label="Autre (ou sans cluster : 44 premières séances)")]
     ax.legend(handles=legende, loc="upper left", frameon=False, fontsize=10, labelcolor=ENCRE_PRINCIPALE)
 
-    ax.set_title("Veolia SA (VIE.PA) : cours de clôture ajusté coloré par régime K-means "
+    ax.set_title("Veolia SA (VIE.PA) : cours de clôture ajusté, régime range K-means en bleu "
                  "(fenêtre de 44 séances rattachée à sa dernière séance)",
                  loc="left", fontsize=12, color=ENCRE_PRINCIPALE, pad=12)
     ax.set_ylabel("€", color=ENCRE_DISCRETE, rotation=0, labelpad=12)
@@ -124,13 +127,11 @@ def main() -> None:
     resultat = clusteriser(features)
     resume(resultat)
 
-    sortie = cours.join(
-        resultat.set_index("date_fin")[["id_fenetre", "cluster", "regime"]], how="left"
-    )
+    sortie = cours.join(resultat.set_index("date_fin")[["id_fenetre", "cluster", "regime"]], how="left")
     sortie["id_fenetre"] = sortie["id_fenetre"].astype("Int64")
     sortie["cluster"] = sortie["cluster"].astype("Int64")
-    sortie.to_csv(FICHIER_CLUSTERS, sep=";", date_format="%Y-%m-%d")
-    print(f"\n{len(sortie)} séances enregistrées dans {FICHIER_CLUSTERS} "
+    sortie.to_csv(FICHIER_SORTIE, sep=";", date_format="%Y-%m-%d")
+    print(f"\n{len(sortie)} séances enregistrées dans {FICHIER_SORTIE} "
           f"({sortie['cluster'].isna().sum()} premières séances sans cluster)")
     tracer_graphique(sortie)
 

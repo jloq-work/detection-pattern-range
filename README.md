@@ -30,7 +30,7 @@
 - ajout d'un graphique:
   - chaque jour,uniquement pour le régime range, le segment de cours prend la couleur du régime de la fenêtre qui se termine ce jour-là
   - couleur : bleu pour range
-  - le graphique, au format png, est stocké dans le dossier data_test
+  - le graphique, intitulé etape3, au format png, est stocké dans le dossier data_test
 - vérification et stockage des variables créées dans un fichier fichier etape3.csv dans le sous dossier data_test, séparateur ";"
 
 ## étape 4: récupération des range pertinents et traçage des supports et résistances
