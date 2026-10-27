@@ -4,6 +4,8 @@ Sortie au format « long » : une ligne par (symbole, date), colonne `symbole` e
 Colonne `saut` : vraie si la clôture varie de plus de 30 % (en valeur absolue) par rapport à la veille.
 Règle déterministe : ces séances rendent l'action inéligible tant qu'une fenêtre de 44 séances les contient
 (scission mal ajustée par Yahoo, offre publique, choc de résultats...). Cf. étapes 2 et 3.
+Colonnes `cloture_brute`, `haut_brut`, `bas_brut` : cours non ajustés des dividendes (Yahoo les ajuste
+seulement des divisions d'actions), pour comparer des niveaux lus sur un graphique de cours réels.
 Le volume Yahoo des tickers .PA correspond en principe aux échanges sur Euronext Paris uniquement
 (hors autres plateformes) : à utiliser en relatif (comparé à sa moyenne) plutôt qu'en absolu.
 """
@@ -25,7 +27,9 @@ def recuperer_cours() -> pd.DataFrame:
     # auto_adjust=True : les colonnes Close, High et Low sont ajustées des dividendes et splits
     # (pas des scissions / spin-offs : voir controler_sauts)
     df = yf.download(SYMBOLES, start=DATE_DEBUT, end=DATE_FIN, auto_adjust=True, progress=False)
-    if df.empty:
+    # auto_adjust=False : Close, High et Low bruts (non ajustés des dividendes)
+    brut = yf.download(SYMBOLES, start=DATE_DEBUT, end=DATE_FIN, auto_adjust=False, progress=False)
+    if df.empty or brut.empty:
         raise RuntimeError(f"Aucune donnée récupérée pour {SYMBOLES}")
 
     morceaux = []
@@ -36,13 +40,17 @@ def recuperer_cours() -> pd.DataFrame:
         cours = df.xs(symbole, axis=1, level="Ticker")[["Close", "High", "Low", "Volume"]].rename(
             columns={"Close": "cloture_ajustee", "High": "haut_ajuste", "Low": "bas_ajuste", "Volume": "volume"}
         ).dropna()
+        cours = cours.join(brut.xs(symbole, axis=1, level="Ticker")[["Close", "High", "Low"]].rename(
+            columns={"Close": "cloture_brute", "High": "haut_brut", "Low": "bas_brut"}
+        ), how="left")
         cours.columns.name = None
         cours.index.name = "date"
         cours.insert(0, "symbole", symbole)
         morceaux.append(cours)
     cours = pd.concat(morceaux).reset_index().sort_values(["symbole", "date"]).reset_index(drop=True)
     cours["volume"] = cours["volume"].astype("int64")
-    cours = cours[["symbole", "date", "cloture_ajustee", "haut_ajuste", "bas_ajuste", "volume"]]
+    cours = cours[["symbole", "date", "cloture_ajustee", "haut_ajuste", "bas_ajuste", "volume",
+                   "cloture_brute", "haut_brut", "bas_brut"]]
     return marquer_sauts(cours)
 
 
@@ -58,6 +66,12 @@ def controler(cours: pd.DataFrame) -> None:
         nb_volume_nul = int((c["volume"] == 0).sum())
         if nb_volume_nul:
             print(f"  Attention : {nb_volume_nul} séance(s) avec un volume nul")
+        nb_brut_manquant = int(c["cloture_brute"].isna().sum())
+        if nb_brut_manquant:
+            print(f"  Attention : {nb_brut_manquant} séance(s) sans cours non ajusté")
+        facteur = c["cloture_ajustee"] / c["cloture_brute"]
+        print(f"  Facteur d'ajustement (ajusté / brut) : {facteur.iloc[0]:.3f} en début de période, "
+              f"{facteur.iloc[-1]:.3f} en fin de période")
         variation = c["cloture_ajustee"].pct_change()
         for date, v in zip(c.loc[c["saut"], "date"], variation[c["saut"]]):
             print(f"  Saut : variation de {v:+.0%} le {date.date()} -> action exclue tant qu'une fenêtre "

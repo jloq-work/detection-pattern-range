@@ -8,7 +8,7 @@
 
 ## étape 1: chargement des données
 - récupérer les actions Veolia, SES, Vivendi et Airbus (symboles Yahoo: VIE.PA, SESG.PA, VIV.PA et AIR.PA) via Yahoo finance et l'utilisation de la librarie yfinance dans Python
-- récupérer le cours de clôture, le cours bas, le cours haut journaliers ajustés, le volume
+- récupérer le cours de clôture, le cours bas, le cours haut journaliers, pour ces trois cours récupérer les valeurs non ajustées et ajustées, le volume
 - récupérer les variables du 01/04/2020 au 30/09/2026
 - création d'une nouvelle variable intitulée saut, qui vaut vrai quand la clôture varie de plus de 30 % par rapport à la veille, faux sino
 - vérification et stockage des variables dans un fichier etape1.csv dans le sous dossier data_test, séparateur ";"
@@ -31,6 +31,7 @@
 - recherche de clusters via la méthode Kmeans, avec K=3, n_init=50, random_state=0
 - nommage automatique des clusters par pente moyenne de leurs fenêtres (la plus faible = autre, celle du milieu = range, la plus forte = autre)
 - rattachement de chaque fenêtre au jour date_fin, pour ne pas utiliser d’information future
+- ajout d'une variable filtre intitulée indice_tendance pour ne récupérer que les range significatifs. On ne garde que les fenêtres « range » où |pente| × 43 / (volatilité × √44) reste inférieur ou égal à 0,5
 - ajout d'un graphique:
   - chaque jour,uniquement pour le régime range, le segment de cours prend la couleur du régime de la fenêtre qui se termine ce jour-là
   - couleur : bleu pour range, gris pour autre

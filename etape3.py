@@ -12,8 +12,13 @@ Choix retenus (cf. README) :
   les deux autres « autre » ;
 - chaque fenêtre est rattachée à sa dernière séance (date_fin) : aucune information future n'est utilisée ;
 - les fenêtres contenant un saut (> 30 % en une séance, cf. étapes 1 et 2) sont retirées de l'ajustement
-  (mise à l'échelle et K-means) et reçoivent le régime « exclu » (pas de numéro de cluster).
-Limite connue et acceptée : le cluster « range » regroupe aussi les tendances lentes en période de faible volatilité.
+  (mise à l'échelle et K-means) et reçoivent le régime « exclu » (pas de numéro de cluster) ;
+- filtre anti-tendance après K-means : indice_tendance = |pente| × 43 / (volatilite_atr × √44), c'est-à-dire le
+  déplacement net de la droite de tendance sur la fenêtre, rapporté à la variation attendue du seul hasard ;
+  une fenêtre n'est « range » que si elle est dans le cluster du milieu ET si indice_tendance <= 0,5
+  (environ la médiane obtenue sur des séries sans tendance). Sinon elle devient « autre » ; son numéro de
+  cluster K-means est conservé pour garder la trace du filtre.
+Limite connue : une tendance lente sur plusieurs mois mais faible sur chaque fenêtre de 44 séances passe le filtre.
 """
 
 from pathlib import Path
@@ -34,6 +39,8 @@ RANDOM_STATE = 0
 FEATURES = ["pente", "volatilite_atr", "ratio_consolidation"]
 FEATURES_LOG = ["volatilite_atr", "ratio_consolidation"]
 NOMS_REGIMES = ["autre", "range", "autre"]  # par pente moyenne croissante
+CLUSTER_RANGE = 1
+SEUIL_INDICE_TENDANCE = 0.5
 
 DOSSIER_DATA = Path(__file__).parent / "data_test"
 FICHIER_COURS = DOSSIER_DATA / "etape1.csv"
@@ -58,6 +65,12 @@ def preparer_features(features: pd.DataFrame, echelle: RobustScaler | None = Non
     return echelle.transform(x), echelle
 
 
+def indice_tendance(features: pd.DataFrame) -> pd.Series:
+    """Déplacement net de la droite de régression sur la fenêtre, en unités de volatilité attendue sur la fenêtre."""
+    n = 44
+    return features["pente"].abs() * (n - 1) / (features["volatilite_atr"] * np.sqrt(n))
+
+
 def clusteriser(features: pd.DataFrame) -> pd.DataFrame:
     """Clustering des fenêtres d'une seule action, ajusté sur les seules fenêtres sans saut."""
     sans_saut = ~features["fenetre_avec_saut"].astype(bool)
@@ -74,14 +87,21 @@ def clusteriser(features: pd.DataFrame) -> pd.DataFrame:
     resultat["regime"] = resultat["cluster"].map(dict(enumerate(NOMS_REGIMES))).astype(object)
     resultat.loc[~sans_saut, "regime"] = "exclu"
 
+    # filtre anti-tendance : le cluster du milieu n'est « range » que si la fenêtre est assez plate
+    resultat["indice_tendance"] = indice_tendance(resultat)
+    filtree = (resultat["cluster"] == CLUSTER_RANGE).fillna(False) & (resultat["indice_tendance"] > SEUIL_INDICE_TENDANCE)
+    resultat.loc[filtree, "regime"] = "autre"
+
     print(f"  Fenêtres exclues (contiennent un saut) : {(~sans_saut).sum()}")
+    print(f"  Fenêtres du cluster range retirées par le filtre anti-tendance : {filtree.sum()} "
+          f"sur {(resultat['cluster'] == CLUSTER_RANGE).sum()}")
     print(f"  Silhouette : {silhouette_score(x, labels):.3f} (surestimée : fenêtres recouvrantes)")
     return resultat
 
 
 def resume(resultat: pd.DataFrame) -> None:
     ajustees = resultat[resultat["regime"] != "exclu"]
-    centres = ajustees.groupby(["cluster", "regime"])[FEATURES].mean()
+    centres = ajustees.groupby(["cluster", "regime"])[FEATURES + ["indice_tendance"]].mean()
     centres.insert(0, "nb_fenetres", ajustees.groupby(["cluster", "regime"]).size())
     print("  Centres en unités d'origine :")
     print(centres.round(4).to_string())
@@ -133,7 +153,7 @@ def tracer_graphique(sortie: pd.DataFrame) -> None:
                               label="Exclu : fenêtre contenant un saut de plus de 30 % en une séance"))
     axes[0, 0].legend(handles=legende, loc="upper left", frameon=False, fontsize=10, labelcolor=ENCRE_PRINCIPALE)
     fig.suptitle("Cours de clôture ajustés, régime range K-means en bleu "
-                 "(un modèle par action ; fenêtre de 44 séances rattachée à sa dernière séance)",
+                 f"(un modèle par action, filtre indice_tendance <= {SEUIL_INDICE_TENDANCE} ; fenêtre de 44 séances rattachée à sa dernière séance)",
                  x=0.01, ha="left", fontsize=12, color=ENCRE_PRINCIPALE)
     fig.tight_layout()
     fig.savefig(FICHIER_GRAPHIQUE)
@@ -153,7 +173,7 @@ def main() -> None:
         resultats.append(resultat)
     resultat = pd.concat(resultats, ignore_index=True).rename(columns={"date_fin": "date"})
 
-    sortie = cours.merge(resultat[["symbole", "date", "id_fenetre", "cluster", "regime"]],
+    sortie = cours.merge(resultat[["symbole", "date", "id_fenetre", "cluster", "indice_tendance", "regime"]],
                          on=["symbole", "date"], how="left")
     sortie["id_fenetre"] = sortie["id_fenetre"].astype("Int64")
     sortie["cluster"] = sortie["cluster"].astype("Int64")
