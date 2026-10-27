@@ -1,4 +1,9 @@
-"""Étape 2 : calcul des 3 features par fenêtre glissante de 44 séances sur le cours de Veolia SA."""
+"""Étape 2 : calcul des 3 features par fenêtre glissante de 44 séances, action par action.
+
+Les fenêtres ne chevauchent jamais deux actions ; id_fenetre repart à 1 pour chaque symbole.
+Colonne `fenetre_avec_saut` : vraie si au moins une séance de la fenêtre est un saut (cf. étape 1) ;
+ces fenêtres sont exclues du clustering à l'étape 3.
+"""
 
 from pathlib import Path
 
@@ -43,6 +48,7 @@ def calculer_features(cours: pd.DataFrame) -> pd.DataFrame:
             "pente": np.r_[np.full(TAILLE_FENETRE - 1, np.nan), pente_log_cours(cloture)],
             "volatilite_atr": true_range(cours).rolling(TAILLE_FENETRE).mean() / cours_moyen,
             "ratio_consolidation": (roulant.max() - roulant.min()) / cours_moyen,
+            "fenetre_avec_saut": cours["saut"].astype(int).rolling(TAILLE_FENETRE).sum() > 0,
         }
     )
     # la première fenêtre est écartée : son premier true range n'a pas de clôture de la veille
@@ -52,11 +58,18 @@ def calculer_features(cours: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    cours = pd.read_csv(FICHIER_COURS, sep=";", parse_dates=["date"], index_col="date")
-    features = calculer_features(cours)
+    cours = pd.read_csv(FICHIER_COURS, sep=";", parse_dates=["date"])
+    morceaux = []
+    for symbole, c in cours.groupby("symbole", sort=False):
+        f = calculer_features(c.set_index("date"))
+        f.insert(0, "symbole", symbole)
+        morceaux.append(f)
+    features = pd.concat(morceaux, ignore_index=True)
     features.to_csv(FICHIER_FEATURES, sep=";", index=False, date_format="%Y-%m-%d")
     print(f"{len(features)} fenêtres de {TAILLE_FENETRE} séances enregistrées dans {FICHIER_FEATURES}")
-    print(features.drop(columns="id_fenetre").describe())
+    print("Fenêtres contenant un saut (exclues du clustering) :")
+    print(features.groupby("symbole")["fenetre_avec_saut"].sum().to_string())
+    print(features.groupby("symbole")[["pente", "volatilite_atr", "ratio_consolidation"]].describe().T.round(4))
 
 
 if __name__ == "__main__":
