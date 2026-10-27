@@ -1,4 +1,7 @@
-"""Étape 2 : calcul des 3 features par fenêtre glissante de 44 séances, action par action.
+"""Étape 2 : calcul des 3 features par fenêtre glissante de 22 séances, action par action.
+
+Fenêtre de détection ramenée de 44 à 22 séances (problème 2) : elle correspond mieux à la durée des ranges
+de la référence annotée (30 séances en médiane). TAILLE_FENETRE doit rester identique dans etape3.py.
 
 Les fenêtres ne chevauchent jamais deux actions ; id_fenetre repart à 1 pour chaque symbole.
 Colonne `fenetre_avec_saut` : vraie si au moins une séance de la fenêtre est un saut (cf. étape 1) ;
@@ -11,7 +14,7 @@ import numpy as np
 import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view
 
-TAILLE_FENETRE = 44
+TAILLE_FENETRE = 22
 DOSSIER_DATA = Path(__file__).parent / "data_test"
 FICHIER_COURS = DOSSIER_DATA / "etape1.csv"
 FICHIER_FEATURES = DOSSIER_DATA / "etape2.csv"

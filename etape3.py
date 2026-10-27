@@ -1,4 +1,4 @@
-"""Étape 3 : clustering K-means (K=3) des fenêtres glissantes de 44 séances pour mettre en évidence les patterns de range.
+"""Étape 3 : clustering K-means (K=3) des fenêtres glissantes de 22 séances pour mettre en évidence les patterns de range.
 
 Un modèle (mise à l'échelle + K-means) est ajusté séparément pour chaque action : la définition du range
 est relative au comportement propre de chaque titre (sa volatilité habituelle notamment).
@@ -13,12 +13,13 @@ Choix retenus (cf. README) :
 - chaque fenêtre est rattachée à sa dernière séance (date_fin) : aucune information future n'est utilisée ;
 - les fenêtres contenant un saut (> 30 % en une séance, cf. étapes 1 et 2) sont retirées de l'ajustement
   (mise à l'échelle et K-means) et reçoivent le régime « exclu » (pas de numéro de cluster) ;
-- filtre anti-tendance après K-means : indice_tendance = |pente| × 43 / (volatilite_atr × √44), c'est-à-dire le
+- filtre anti-tendance après K-means : indice_tendance = |pente| × (n − 1) / (volatilite_atr × √n), n = 22, c'est-à-dire le
   déplacement net de la droite de tendance sur la fenêtre, rapporté à la variation attendue du seul hasard ;
   une fenêtre n'est « range » que si elle est dans le cluster du milieu ET si indice_tendance <= 0,5
   (environ la médiane obtenue sur des séries sans tendance). Sinon elle devient « autre » ; son numéro de
   cluster K-means est conservé pour garder la trace du filtre.
-Limite connue : une tendance lente sur plusieurs mois mais faible sur chaque fenêtre de 44 séances passe le filtre.
+Limite connue : une tendance lente sur plusieurs mois mais faible sur chaque fenêtre de 22 séances passe le filtre.
+Le seuil 0,5 reste valable avec n = 22 : sur des séries sans tendance, la médiane de l'indice vaut 0,52 (0,53 avec n = 44).
 """
 
 from pathlib import Path
@@ -40,6 +41,7 @@ FEATURES = ["pente", "volatilite_atr", "ratio_consolidation"]
 FEATURES_LOG = ["volatilite_atr", "ratio_consolidation"]
 NOMS_REGIMES = ["autre", "range", "autre"]  # par pente moyenne croissante
 CLUSTER_RANGE = 1
+TAILLE_FENETRE = 22  # doit être identique à etape2.py
 SEUIL_INDICE_TENDANCE = 0.5
 
 DOSSIER_DATA = Path(__file__).parent / "data_test"
@@ -67,7 +69,7 @@ def preparer_features(features: pd.DataFrame, echelle: RobustScaler | None = Non
 
 def indice_tendance(features: pd.DataFrame) -> pd.Series:
     """Déplacement net de la droite de régression sur la fenêtre, en unités de volatilité attendue sur la fenêtre."""
-    n = 44
+    n = TAILLE_FENETRE
     return features["pente"].abs() * (n - 1) / (features["volatilite_atr"] * np.sqrt(n))
 
 
@@ -147,13 +149,13 @@ def tracer_graphique(sortie: pd.DataFrame) -> None:
     axes[-1, 0].xaxis.set_major_locator(mdates.YearLocator())
     axes[-1, 0].xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     legende = [Line2D([], [], color=COULEUR_RANGE, linewidth=2.5, label="Range"),
-               Line2D([], [], color=COULEUR_AUTRE, linewidth=2.5, label="Autre (ou sans cluster : 44 premières séances)")]
+               Line2D([], [], color=COULEUR_AUTRE, linewidth=2.5, label=f"Autre (ou sans cluster : {TAILLE_FENETRE} premières séances)")]
     if (sortie["regime"] == "exclu").any():
         legende.append(Line2D([], [], color=COULEUR_EXCLU, linewidth=2.5,
                               label="Exclu : fenêtre contenant un saut de plus de 30 % en une séance"))
     axes[0, 0].legend(handles=legende, loc="upper left", frameon=False, fontsize=10, labelcolor=ENCRE_PRINCIPALE)
     fig.suptitle("Cours de clôture ajustés, régime range K-means en bleu "
-                 f"(un modèle par action, filtre indice_tendance <= {SEUIL_INDICE_TENDANCE} ; fenêtre de 44 séances rattachée à sa dernière séance)",
+                 f"(un modèle par action, filtre indice_tendance <= {SEUIL_INDICE_TENDANCE} ; fenêtre de {TAILLE_FENETRE} séances rattachée à sa dernière séance)",
                  x=0.01, ha="left", fontsize=12, color=ENCRE_PRINCIPALE)
     fig.tight_layout()
     fig.savefig(FICHIER_GRAPHIQUE)

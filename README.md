@@ -1,8 +1,8 @@
 # Projet test: système d'aide à la prise de position sur actions françaises (position longue) sur les breakouts confirmés de range
 - L'idée est de tester sur plusieurs actions française: Veolia, SES, Vivendi et Airbus la détection de pattern de range sur la période avril 2020 à septembre 2026
-- La détection est réalisée par clusterisation sur des fenêtres glissantes de 2 mois de cotations (44 séances boursières)
+- La détection est réalisée par clusterisation sur des fenêtres glissantes de 2 mois de cotations (22 séances boursières)
 - 3 clusters K-means sont créés selon 3 features calculés par fenêtre glissante: la pente de la tendance, la volatilité, le ratio de consolidation des prix
-- ne sont ensuite retenus que les range significatifs (durée de l'épisode minimale de 15 séances), les épisodes de range entrecoupés de courte interruption (5 séances ou moins) sont fusionnés
+- ne sont ensuite retenus que les range significatifs (durée de l'épisode minimale à déterminer), les épisodes de range entrecoupés de courte interruption (à déterminer nombre de séances séances ou moins) sont fusionnés
 - des supports et des résistances sont tracés sur ces épisodes de range
 - à compléter au fur et à mesure de l'avancement de la réflexion avec l'IA
 
@@ -15,14 +15,14 @@
 
 ## étape 2: calcul des features nécessaires à la clusterisation
 - à partir des données de l'étape 1, créer des variables supplémentaires
-- variable 1: un identifiant qui représente une fenêtre glissante de 44 séances boursières, pas de la fenêtre: elle avance d'une séance boursière à la fois
-- variable 2: un premier feature, le coefficient de la tendance de la regression linéaire du logarithme du cours de l'action sur la fenêtre de 44 séances, une valeur par fenêtre glissante
-- variable 3: un second feature, la volatilité du cours de l'action sur la fenêtre de 44 séances. Option retenue pour le calcul de la volatilité: ATR normalisé par le cours
+- variable 1: un identifiant qui représente une fenêtre glissante de 22 séances boursières, pas de la fenêtre: elle avance d'une séance boursière à la fois
+- variable 2: un premier feature, le coefficient de la tendance de la regression linéaire du logarithme du cours de l'action sur la fenêtre de 22 séances, une valeur par fenêtre glissante
+- variable 3: un second feature, la volatilité du cours de l'action sur la fenêtre de 22 séances. Option retenue pour le calcul de la volatilité: ATR normalisé par le cours
   - true range journalier: max(haut - bas, |haut - clôture de la veille|, |bas - clôture de la veille|)
-  - ATR: moyenne des true range sur la fenêtre de 44 séances
+  - ATR: moyenne des true range sur la fenêtre de 22 séances
   - volatilité = ATR / cours de clôture moyen de la fenêtre (même dénominateur que le ratio de consolidation ci dessous)
-- variable 4: un troisième feature, le ratio de consolidation du cours de l'action sur la fenêtre de 44 séances, une valeur par identifiant donc. Pour calculer ce ratio, applique la formule suivante: (cours max - cours min)/cours moyen 
-- variable 5: intitulée fenetre_avec_saut, qui vaut vrai quand la fenêtre de 44 séances contient au moins un saut
+- variable 4: un troisième feature, le ratio de consolidation du cours de l'action sur la fenêtre de 22 séances, une valeur par identifiant donc. Pour calculer ce ratio, applique la formule suivante: (cours max - cours min)/cours moyen 
+- variable 5: intitulée fenetre_avec_saut, qui vaut vrai quand la fenêtre de 22 séances contient au moins un saut
 - vérification et stockage des variables créées dans un fichier etape2.csv dans le sous dossier data_test, séparateur ";"
 
 ## étape 3: clusterisation pour mettre en évidence les patterns de range
@@ -31,7 +31,7 @@
 - recherche de clusters via la méthode Kmeans, avec K=3, n_init=50, random_state=0
 - nommage automatique des clusters par pente moyenne de leurs fenêtres (la plus faible = autre, celle du milieu = range, la plus forte = autre)
 - rattachement de chaque fenêtre au jour date_fin, pour ne pas utiliser d’information future
-- ajout d'une variable filtre intitulée indice_tendance pour ne récupérer que les range significatifs. On ne garde que les fenêtres « range » où |pente| × 43 / (volatilité × √44) reste inférieur ou égal à 0,5
+- ajout d'une variable filtre intitulée indice_tendance pour ne récupérer que les range significatifs. On ne garde que les fenêtres « range » où |pente| × 21 / (volatilité × √22) reste inférieur ou égal à 0,5
 - ajout d'un graphique:
   - chaque jour,uniquement pour le régime range, le segment de cours prend la couleur du régime de la fenêtre qui se termine ce jour-là
   - couleur : bleu pour range, gris pour autre

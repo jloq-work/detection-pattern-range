@@ -2,7 +2,7 @@
 
 Sortie au format « long » : une ligne par (symbole, date), colonne `symbole` en tête.
 Colonne `saut` : vraie si la clôture varie de plus de 30 % (en valeur absolue) par rapport à la veille.
-Règle déterministe : ces séances rendent l'action inéligible tant qu'une fenêtre de 44 séances les contient
+Règle déterministe : ces séances rendent l'action inéligible tant qu'une fenêtre de détection (22 séances, cf. étape 2) les contient
 (scission mal ajustée par Yahoo, offre publique, choc de résultats...). Cf. étapes 2 et 3.
 Colonnes `cloture_brute`, `haut_brut`, `bas_brut` : cours non ajustés des dividendes (Yahoo les ajuste
 seulement des divisions d'actions), pour comparer des niveaux lus sur un graphique de cours réels.
@@ -75,7 +75,7 @@ def controler(cours: pd.DataFrame) -> None:
         variation = c["cloture_ajustee"].pct_change()
         for date, v in zip(c.loc[c["saut"], "date"], variation[c["saut"]]):
             print(f"  Saut : variation de {v:+.0%} le {date.date()} -> action exclue tant qu'une fenêtre "
-                  f"de 44 séances contient cette séance")
+                  f"de détection contient cette séance")
 
 
 def main() -> None:
