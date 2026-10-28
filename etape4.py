@@ -235,7 +235,8 @@ def afficher_resume(evaluation: pd.DataFrame, cassures: pd.DataFrame) -> None:
                   f"{r['ecart_resistance_pct'].median():+.1f} % (sur {r['ecart_resistance_pct'].notna().sum()} ranges)")
         print(f"  part des jours de tendance en épisode validé : {t['part_jours_en_episode_valide'].mean():.0%} ; "
               f"tendances à plus de 25 % : {(t['part_jours_en_episode_valide'] > 0.25).sum()} / {len(t)}")
-        absentes = evaluation.loc[evaluation.get("statut_evaluation", pd.Series(dtype=object)).notna(), "symbole"].unique()
+        absentes = (evaluation.loc[evaluation["statut_evaluation"].notna(), "symbole"].unique()
+                    if "statut_evaluation" in evaluation else [])
         if len(absentes):
             print(f"  lignes ignorées, action absente des données : {', '.join(absentes)}")
     if not cassures.empty:

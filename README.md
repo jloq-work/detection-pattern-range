@@ -38,15 +38,12 @@
   - le graphique, intitulé etape3, au format png, est stocké dans le dossier data_test
 - vérification et stockage des variables créées dans un fichier fichier etape3.csv dans le sous dossier data_test, séparateur ";"
 
-## étape 4: récupération des range pertinents et traçage des supports et résistances
-- n'utiliser que le passé connu: aucune information future n'est utilisée
-- fusionner les épisodes de range séparés par des interruptions (cluster=autre) d'une durée de 5 séances boursières ou moins: si le range reprend dans les 5 séances, l’épisode continue. Sinon, il est clos rétroactivement au début de l’interruption
-- créer une nouvelle variable d'identification des range: épisode de range d'une durée minimale de 15 séances boursières, range validé seulement à partir de sa 15e séance
-- période de calcul des bandes de niveaux des supports et des résistances: partir du début de l’épisode, avec au moins 15 séances et au plus les 44 dernières
-- utiliser et comparer 2 méthodes pour déterminer les bandes des supports et des résistances
-  - méthode 1: utilisation des quantiles, bande de support=quantiles 5 à 10% des cours bas et bande de résistance=quantile 90 à 95% des cours hauts
-  - méthode 2: point de retournements regroupés, repérer les creux et sommets locaux (un point plus bas ou plus haut que ses 3 voisins de chaque côté), regrouper ceux qui sont à moins de 0,5*ATR l'un de l'autre, et retenir les niveaux touchés au moins 2 fois. Un creux ou un sommet n’est connu que 3 séances après coup. ATR calculé sur les 44 dernières séances. Règle pour choisir le support et la résistance parmi les niveaux trouvés: le niveau confirmé le plus proche sous le cours pour le support, et le plus proche au-dessus pour la résistance
-  - plan de comparaison des 2 méthodes:
-    - produire un tableau des épisodes de range retenus par méthode avec les informations suivantes: dates, durée, support et résistance selon les méthodes, nombre de contacts
-    - mesure du taux de respect pour chaque méthode: quand le cours entre dans la zone de support, part des cas où il cloture au dessus 5 et 10 séances plus tard, contre la part des cas où il casse sous la zone
-    - contrôle visuel:un graphique sur toute la période avec les zones en bandes semi transparentes
+## étape 4: épisodes de range, bandes de support et de résistance, cassures
+- n'utiliser que le passé connu: aucune information future n'est utilisée; traitement action par action
+- interruptions (régime autre ou exclu) de 3 séances ou moins absorbées si le range reprend, sinon épisode clos à sa dernière séance range
+- épisode validé à partir de sa 10e séance
+- bandes (méthode des quantiles): support = quantiles 5 à 10 % des cours bas, résistance = quantiles 90 à 95 % des cours hauts, calculées depuis le début de la fenêtre de détection (22 séances) qui a ouvert l'épisode, au plus les 44 dernières séances; bandes figées pendant une interruption
+- fin d'épisode par cassure confirmée: 2 clôtures consécutives au-delà de la bande d'au moins 0,25 × ATR(22); nouvel épisode possible seulement après une séance non range
+- bandes calculées en cours ajustés puis converties en cours bruts (facteur cloture_ajustee / cloture_brute)
+- évaluation: comparaison à data_test/reference.csv (range vu la veille de la cassure, cassure détectée à ±3 séances, écart de résistance en cours bruts, part de jours de tendance en épisode) et suite des cassures par le haut (rendement à 5 et 10 séances, fausse cassure = retour sous la bande de résistance en 10 séances)
+- sorties: etape4.csv, etape4_episodes.csv, etape4_evaluation.csv, etape4_cassures.csv, etape4.png dans data_test, séparateur ";"
