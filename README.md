@@ -42,6 +42,7 @@
 - n'utiliser que le passé connu: aucune information future n'est utilisée; traitement action par action
 - interruptions (régime autre ou exclu) de 3 séances ou moins absorbées si le range reprend, sinon épisode clos à sa dernière séance range
 - épisode validé à partir de sa 10e séance
+- une fois l’épisode validé, une séance qui n’est plus range ne compte pas comme interruption si sa clôture reste entre le bas de la bande de support et le haut de la bande de résistance de la veille, sauf séance exclue
 - bandes (méthode des quantiles): support = quantiles 5 à 10 % des cours bas, résistance = quantiles 90 à 95 % des cours hauts, calculées depuis le début de la fenêtre de détection (22 séances) qui a ouvert l'épisode, au plus les 44 dernières séances; bandes figées pendant une interruption
 - fin d'épisode par cassure confirmée: 2 clôtures consécutives au-delà de la bande d'au moins 0,25 × ATR(22); nouvel épisode possible seulement après une séance non range
 - bandes calculées en cours ajustés puis converties en cours bruts (facteur cloture_ajustee / cloture_brute)

@@ -15,7 +15,7 @@ from pathlib import Path
 import pandas as pd
 import yfinance as yf
 
-SYMBOLES = ["VIE.PA", "SW.PA", "VIV.PA", "AIR.PA"]
+SYMBOLES = ["VIE.PA", "SW.PA", "VIV.PA", "AIR.PA", "S30.PA"]
 DATE_DEBUT = "2020-04-01"
 DATE_FIN = "2026-10-01"  # borne exclusive pour yfinance -> inclut le 30/09/2026
 SEUIL_SAUT = 0.30  # variation journalière absolue de la clôture au-delà de laquelle la séance est un « saut »

@@ -5,6 +5,11 @@ Toutes les règles sont appliquées séance par séance, action par action, avec
   MAX_INTERRUPTION séances ou moins est absorbée si le range reprend ; au-delà, l'épisode est clos
   rétroactivement à sa dernière séance « range » (motif « fin_regime ») ;
 - validation : l'épisode est validé à partir de sa DUREE_MIN-ième séance, comptée depuis son début ;
+- maintien par confinement du prix (MAINTIEN_PAR_CONFINEMENT) : une fois l'épisode validé, une séance qui n'est
+  plus « range » à l'étape 3 ne compte pas comme interruption si sa clôture reste comprise entre le bas de la bande
+  de support et le haut de la bande de résistance de la veille (sauf séance « exclu ») ; l'étape 3 ouvre
+  l'épisode, le confinement du prix le maintient. Retenu car il améliore la détection sur les actions de contrôle
+  (Sodexo, Solutions 30) sans augmenter la part de jours de tendance en épisode ;
 - bandes (méthode des quantiles), calculées depuis le début de la fenêtre de détection (22 séances) qui a
   ouvert l'épisode — fenêtre plate grâce au filtre anti-tendance de l'étape 3 —, au plus les FENETRE_BANDES dernières : support = [q5 %, q10 %] des cours bas, résistance = [q90 %, q95 %] des cours hauts ;
   pendant une interruption, les bandes de la dernière séance « range » sont conservées (statut « pause ») ;
@@ -41,6 +46,7 @@ RETRODATER_BANDES = True   # bandes calculées dès le début de la fenêtre de 
 TAILLE_FENETRE_DETECTION = 22  # doit être identique à etape2.py / etape3.py
 MARGE_CASSURE_ATR = 0.25   # la clôture doit dépasser la bande d'au moins MARGE × ATR(22)
 CLOTURES_CONFIRMATION = 2  # nombre de clôtures consécutives au-delà de la bande pour acter la cassure
+MAINTIEN_PAR_CONFINEMENT = True   # épisode validé maintenu tant que la clôture reste dans ses bandes, même si le régime n'est plus « range »
 TOLERANCE_CASSURE = 3  # séances d'écart admises entre la cassure détectée et celle de la référence
 HORIZONS = (5, 10)
 
@@ -76,6 +82,7 @@ def traiter_action(c: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
     """Machine à états séance par séance pour une action (c trié par date, index 0..n-1)."""
     n = len(c)
     est_range = (c["regime"] == "range").to_numpy()
+    est_exclu = (c["regime"] == "exclu").to_numpy()
     bas, haut, cloture = c["bas_ajuste"].to_numpy(), c["haut_ajuste"].to_numpy(), c["cloture_ajustee"].to_numpy()
     veille = c["cloture_ajustee"].shift()
     tr = pd.concat([c["haut_ajuste"] - c["bas_ajuste"], (c["haut_ajuste"] - veille).abs(),
@@ -87,6 +94,12 @@ def traiter_action(c: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
     id_range = np.full(n, np.nan)
     bandes = np.full((n, len(BANDES)), np.nan)
     episodes, ep, arme, nb_valides = [], None, True, 0
+
+    def confine(ep: dict, i: int) -> bool:
+        """Épisode validé, séance non exclue et clôture comprise dans les bandes de la veille."""
+        if ep["id_range"] is None or est_exclu[i] or np.isnan(bandes[i - 1, 0]):
+            return False
+        return bandes[i - 1, 0] <= cloture[i] <= bandes[i - 1, 3]
 
     def clore(fin: int, motif: str) -> None:
         if ep["id_range"] is not None:
@@ -117,7 +130,7 @@ def traiter_action(c: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
                 continue
             ep = {"debut": i, "dernier_range": i, "interruption": 0, "id_range": None, "validation": None,
                   "debut_bandes": max(0, i - TAILLE_FENETRE_DETECTION + 1) if RETRODATER_BANDES else i}
-        elif est_range[i]:
+        elif est_range[i] or (MAINTIEN_PAR_CONFINEMENT and confine(ep, i)):
             ep["interruption"], ep["dernier_range"] = 0, i
         else:
             ep["interruption"] += 1
@@ -289,7 +302,7 @@ def tracer_graphique(donnees: pd.DataFrame) -> None:
     fig.suptitle("Épisodes de range, bandes de support et de résistance (quantiles) et cassures — calcul sans "
                  "information future, niveaux affichés en cours bruts", x=0.01, ha="left", fontsize=12,
                  color=ENCRE_PRINCIPALE)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.985))
     fig.savefig(FICHIER_GRAPHIQUE)
     plt.close(fig)
     print(f"Graphique enregistré dans {FICHIER_GRAPHIQUE}")
