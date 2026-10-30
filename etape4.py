@@ -260,10 +260,22 @@ def afficher_resume(evaluation: pd.DataFrame, cassures: pd.DataFrame) -> None:
 
 
 # ---------------------------------------------------------------- graphique
+
+def symboles_graphique(symboles_disponibles) -> list[str]:
+    """Actions tracées : celles de la référence annotée (sinon les 5 premières), pour garder un graphique lisible."""
+    fichier = DOSSIER_DATA / "reference.csv"
+    if fichier.exists():
+        ref = pd.read_csv(fichier, sep=";")["symbole"].unique()
+        retenus = [s for s in dict.fromkeys(symboles_disponibles) if s in ref]
+        if retenus:
+            return retenus
+    return list(dict.fromkeys(symboles_disponibles))[:5]
+
+
 def tracer_graphique(donnees: pd.DataFrame) -> None:
     ref = (pd.read_csv(FICHIER_REFERENCE, sep=";", decimal=",", parse_dates=["date_debut", "date_fin"])
            if FICHIER_REFERENCE.exists() else pd.DataFrame(columns=["symbole", "type"]))
-    symboles = list(dict.fromkeys(donnees["symbole"]))
+    symboles = symboles_graphique(donnees["symbole"])
     fig, axes = plt.subplots(len(symboles), 1, figsize=(14, 3.8 * len(symboles)), dpi=120, sharex=True, squeeze=False)
     for ax, symbole in zip(axes[:, 0], symboles):
         g = donnees[donnees["symbole"] == symbole]
@@ -325,8 +337,11 @@ def main() -> None:
     episodes = pd.concat(tableaux, ignore_index=True)
     episodes.to_csv(FICHIER_EPISODES, sep=";", index=False, float_format="%.2f")
     print(f"\n{len(episodes)} épisodes validés (enregistrés dans {FICHIER_EPISODES}) :")
-    print(episodes.groupby("symbole").agg(episodes=("id_range", "size"), duree_mediane=("duree_seances", "median"))
-          .join(pd.crosstab(episodes["symbole"], episodes["motif_fin"])).to_string())
+    resume = (episodes.groupby("symbole").agg(episodes=("id_range", "size"), duree_mediane=("duree_seances", "median"))
+              .join(pd.crosstab(episodes["symbole"], episodes["motif_fin"])))
+    print(resume.loc[resume.index.intersection(symboles_graphique(donnees["symbole"]))].to_string())
+    print(f"Toutes actions ({resume.shape[0]}) : " + ", ".join(f"{k} {int(v)}" for k, v in resume.drop(
+        columns=["episodes", "duree_mediane"]).sum().items()))
 
     evaluation = evaluer_reference(donnees)
     if not evaluation.empty:

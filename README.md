@@ -38,7 +38,7 @@
   - le graphique, intitulé etape3, au format png, est stocké dans le dossier data_test
 - vérification et stockage des variables créées dans un fichier fichier etape3.csv dans le sous dossier data_test, séparateur ";"
 
-## étape 4: épisodes de range, bandes de support et de résistance, cassures
+## étape 4: épisodes de range, bandes de support et de résistance, cassures et confirmation
 - n'utiliser que le passé connu: aucune information future n'est utilisée; traitement action par action
 - interruptions (régime autre ou exclu) de 3 séances ou moins absorbées si le range reprend, sinon épisode clos à sa dernière séance range
 - épisode validé à partir de sa 10e séance

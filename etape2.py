@@ -70,9 +70,9 @@ def main() -> None:
     features = pd.concat(morceaux, ignore_index=True)
     features.to_csv(FICHIER_FEATURES, sep=";", index=False, date_format="%Y-%m-%d")
     print(f"{len(features)} fenêtres de {TAILLE_FENETRE} séances enregistrées dans {FICHIER_FEATURES}")
-    print("Fenêtres contenant un saut (exclues du clustering) :")
-    print(features.groupby("symbole")["fenetre_avec_saut"].sum().to_string())
-    print(features.groupby("symbole")[["pente", "volatilite_atr", "ratio_consolidation"]].describe().T.round(4))
+    avec_saut = features.groupby("symbole")["fenetre_avec_saut"].sum()
+    print(f"Fenêtres contenant un saut (exclues du clustering) : {int(avec_saut.sum())}, dans {int((avec_saut > 0).sum())} action(s)")
+    print(features[["pente", "volatilite_atr", "ratio_consolidation"]].describe().T.round(4).to_string())
 
 
 if __name__ == "__main__":

@@ -12,7 +12,8 @@ Choix retenus (cf. README) :
   les deux autres « autre » ;
 - chaque fenêtre est rattachée à sa dernière séance (date_fin) : aucune information future n'est utilisée ;
 - les fenêtres contenant un saut (> 30 % en une séance, cf. étapes 1 et 2) sont retirées de l'ajustement
-  (mise à l'échelle et K-means) et reçoivent le régime « exclu » (pas de numéro de cluster) ;
+  (mise à l'échelle et K-means) et reçoivent le régime « exclu » (pas de numéro de cluster) ; de même pour les
+  fenêtres à cours figé (volatilité ou ratio de consolidation nul : suspension, absence d'échanges) ;
 - filtre anti-tendance après K-means : indice_tendance = |pente| × (n − 1) / (volatilite_atr × √n), n = 22, c'est-à-dire le
   déplacement net de la droite de tendance sur la fenêtre, rapporté à la variation attendue du seul hasard ;
   une fenêtre n'est « range » que si elle est dans le cluster du milieu ET si indice_tendance <= 0,5
@@ -22,6 +23,8 @@ Limite connue : une tendance lente sur plusieurs mois mais faible sur chaque fen
 Le seuil 0,5 reste valable avec n = 22 : sur des séries sans tendance, la médiane de l'indice vaut 0,52 (0,53 avec n = 44).
 """
 
+import contextlib
+import io
 from pathlib import Path
 
 import matplotlib.dates as mdates
@@ -74,8 +77,11 @@ def indice_tendance(features: pd.DataFrame) -> pd.Series:
 
 
 def clusteriser(features: pd.DataFrame) -> pd.DataFrame:
-    """Clustering des fenêtres d'une seule action, ajusté sur les seules fenêtres sans saut."""
-    sans_saut = ~features["fenetre_avec_saut"].astype(bool)
+    """Clustering des fenêtres d'une seule action, ajusté sur les seules fenêtres sans saut et à cours non figé."""
+    avec_saut = features["fenetre_avec_saut"].astype(bool)
+    # cours figé sur toute la fenêtre (suspension, absence d'échanges) : volatilité ou ratio nul, log impossible
+    fige = (features["volatilite_atr"] <= 0) | (features["ratio_consolidation"] <= 0)
+    sans_saut = ~avec_saut & ~fige
     x, _ = preparer_features(features[sans_saut])
     kmeans = KMeans(n_clusters=N_CLUSTERS, init="k-means++", n_init=N_INIT, random_state=RANDOM_STATE)
     labels = kmeans.fit_predict(x)
@@ -94,7 +100,7 @@ def clusteriser(features: pd.DataFrame) -> pd.DataFrame:
     filtree = (resultat["cluster"] == CLUSTER_RANGE).fillna(False) & (resultat["indice_tendance"] > SEUIL_INDICE_TENDANCE)
     resultat.loc[filtree, "regime"] = "autre"
 
-    print(f"  Fenêtres exclues (contiennent un saut) : {(~sans_saut).sum()}")
+    print(f"  Fenêtres exclues : {avec_saut.sum()} avec un saut, {(fige & ~avec_saut).sum()} à cours figé")
     print(f"  Fenêtres du cluster range retirées par le filtre anti-tendance : {filtree.sum()} "
           f"sur {(resultat['cluster'] == CLUSTER_RANGE).sum()}")
     print(f"  Silhouette : {silhouette_score(x, labels):.3f} (surestimée : fenêtres recouvrantes)")
@@ -141,8 +147,19 @@ def tracer_panneau(ax: plt.Axes, sortie: pd.DataFrame, symbole: str) -> None:
     ax.spines["bottom"].set_color(AXE)
 
 
+def symboles_graphique(symboles_disponibles) -> list[str]:
+    """Actions tracées : celles de la référence annotée (sinon les 5 premières), pour garder un graphique lisible."""
+    fichier = DOSSIER_DATA / "reference.csv"
+    if fichier.exists():
+        ref = pd.read_csv(fichier, sep=";")["symbole"].unique()
+        retenus = [s for s in dict.fromkeys(symboles_disponibles) if s in ref]
+        if retenus:
+            return retenus
+    return list(dict.fromkeys(symboles_disponibles))[:5]
+
+
 def tracer_graphique(sortie: pd.DataFrame) -> None:
-    symboles = list(dict.fromkeys(sortie["symbole"]))
+    symboles = symboles_graphique(sortie["symbole"])
     fig, axes = plt.subplots(len(symboles), 1, figsize=(13, 3.6 * len(symboles)), dpi=120, sharex=True, squeeze=False)
     for ax, symbole in zip(axes[:, 0], symboles):
         tracer_panneau(ax, sortie[sortie["symbole"] == symbole].set_index("date"), symbole)
@@ -167,12 +184,18 @@ def main() -> None:
     cours = pd.read_csv(FICHIER_COURS, sep=";", parse_dates=["date"])
     features = pd.read_csv(FICHIER_FEATURES, sep=";", parse_dates=["date_debut", "date_fin"])
 
+    detailles = symboles_graphique(features["symbole"])  # résumé détaillé seulement pour les actions de la référence
     resultats = []
     for symbole, f in features.groupby("symbole", sort=False):
-        print(f"\n=== {symbole} ===")
-        resultat = clusteriser(f.reset_index(drop=True))
-        resume(resultat)
+        if symbole in detailles:
+            print(f"\n=== {symbole} ===")
+            resultat = clusteriser(f.reset_index(drop=True))
+            resume(resultat)
+        else:
+            with contextlib.redirect_stdout(io.StringIO()):
+                resultat = clusteriser(f.reset_index(drop=True))
         resultats.append(resultat)
+    print(f"\n{features['symbole'].nunique()} actions traitées (résumé détaillé pour : {', '.join(detailles)})")
     resultat = pd.concat(resultats, ignore_index=True).rename(columns={"date_fin": "date"})
 
     sortie = cours.merge(resultat[["symbole", "date", "id_fenetre", "cluster", "indice_tendance", "regime"]],
