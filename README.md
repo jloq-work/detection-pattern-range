@@ -48,3 +48,31 @@
 - bandes calculées en cours ajustés puis converties en cours bruts (facteur cloture_ajustee / cloture_brute)
 - évaluation: comparaison à data_test/reference.csv (range vu la veille de la cassure, cassure détectée à ±3 séances, écart de résistance en cours bruts, part de jours de tendance en épisode) et suite des cassures par le haut (rendement à 5 et 10 séances, fausse cassure = retour sous la bande de résistance en 10 séances)
 - sorties: etape4.csv, etape4_episodes.csv, etape4_evaluation.csv, etape4_cassures.csv, etape4.png dans data_test, séparateur ";"
+
+## étape 5 : test de performance des positions prises sur cassure confirmée d'un range (position longue uniquement).
+
+- signal (cf. étape 4) : cassure par le haut confirmée = 2 clôtures consécutives (J1, J2) au-dessus du haut de la bande de résistance d'au moins 0,25 × ATR(22).
+Filtre de volume : max(volume J1, volume J2) >= SEUIL_VOLUME × médiane des volumes des 22 séances précédant J1.
+- prise de position : entrée à l'ouverture de J3 (première séance après la cassure confirmée) ;
+- stop de la position: calculé avec les bandes figées à la clôture de J2 :
+    S1 = bas de la bande de résistance - 0,25 × ATR(22)     (retour franc dans le range)
+    S3 = milieu du range = (haut du support + bas de la résistance) / 2
+    S4 = prix d'entrée - 2 × ATR(22)                        (stop de volatilité)
+- stop touché si le plus bas de la séance l'atteint : sortie au stop, ou à l'ouverture si le cours ouvre dessous ;
+- sorties testées (SORTIES) :
+    fixe_5 / fixe_10 : sortie à la clôture de la 5e / 10e séance après la séance d'entrée ;
+    T1_chandelier : stop suiveur = plus haut atteint depuis l'entrée - 3 × ATR(22) ;
+    T2_canal10    : stop suiveur = plus bas des 10 dernières séances ;
+  les stops suiveurs ne font que monter (jamais sous le stop initial), sont recalculés à chaque clôture et
+  s'appliquent dès la séance suivante ; durée maximale DUREE_MAX_SUIVEUR séances (sortie à la clôture) ;
+- frais : FRAIS_ALLER_RETOUR du prix d'entrée ; une seule position à la fois par action et par variante.
+Les rendements sont calculés en cours ajustés (dividendes inclus) ; entrée et stop sont aussi donnés en cours bruts,
+niveaux réellement visibles sur le marché (le jour d'un détachement de dividende, un stop en cours brut est à abaisser
+du montant du dividende).
+
+Points de comparaison :
+- les mêmes cassures sans filtre de volume ;
+- des entrées tirées au hasard dans la même action (hors périodes exclues), avec un stop à la même distance en ATR
+  que la position réelle (N_TIRAGES tirages par position) : le signal doit faire mieux que le hasard.
+Robustesse : résultats séparés pour deux moitiés de l'univers (actions A et B, en alternant dans l'ordre alphabétique)
+et pour deux périodes (2020-2023 et 2024-2026).
