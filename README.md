@@ -1,5 +1,5 @@
 # Projet test: système d'aide à la prise de position sur actions françaises (position longue) sur les breakouts confirmés de range
-- L'idée est de tester sur plusieurs actions françaises la détection de pattern de range sur la période avril 2020 à septembre 2026
+- L'idée est de tester sur actions françaises la détection de pattern de range sur la période avril 2020 à septembre 2026
 - La détection est réalisée par clusterisation sur des fenêtres glissantes de 2 mois de cotations (22 séances boursières)
 - ne sont ensuite retenus que les range, resistance et cassures significatifs 
 
