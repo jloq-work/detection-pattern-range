@@ -28,7 +28,7 @@ DATE_FIN = "2026-10-01"  # borne exclusive pour yfinance -> inclut le 30/09/2026
 SEUIL_SAUT = 0.30  # variation journalière absolue de la clôture au-delà de laquelle la séance est un « saut »
 DOSSIER_DATA = Path(__file__).parent / "data_test"
 FICHIER_CSV = DOSSIER_DATA / "etape1.csv"
-FICHIER_SYMBOLES = DOSSIER_DATA / "symbols.csv"
+FICHIER_SYMBOLES = DOSSIER_DATA / "symbols.csv" # Liste de tickers boursiers utilisée pour un projet d'analyse de données
 
 
 def lire_symboles() -> list[str]:

@@ -1,0 +1,10 @@
+# Dépendances des étapes 1 à 7 (etape1.py à etape7.py)
+# Versions testées avec Python 3.14.3 ; pandas 3 nécessite Python 3.11 ou plus récent.
+# Versions figées pour reproduire les résultats du BILAN (yfinance évolue souvent).
+# Installation : pip install -r requirements.txt
+
+yfinance==1.7.0        # étapes 1 et 7 : téléchargement des cours et du CAC 40 sur Yahoo Finance
+pandas==3.0.1          # étapes 1 à 7
+numpy==2.4.2           # étapes 2 à 7
+scikit-learn==1.8.0    # étape 3 : RobustScaler, KMeans, silhouette
+matplotlib==3.10.8     # étapes 3 à 5 : graphiques

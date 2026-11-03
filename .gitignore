@@ -1,1 +1,3 @@
-data_test/
+data_test/*
+!data_test/reference.csv
+!data_test/symbols.csv
