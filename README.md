@@ -104,4 +104,4 @@ Règle fixée avant tout calcul :
 La moitié B est réservée (non chargée). Si l'indice ne peut pas être téléchargé, un indice de remplacement
 équipondéré construit sur la moitié A est utilisé, et le résultat n'est alors qu'indicatif.
 
-## bilan des tests de performance dans BILAN.md 
+## bilan des tests de performance dans [BILAN.md](./BILAN.md) 
