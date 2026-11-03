@@ -49,16 +49,18 @@
 - évaluation: comparaison à data_test/reference.csv (range vu la veille de la cassure, cassure détectée à ±3 séances, écart de résistance en cours bruts, part de jours de tendance en épisode) et suite des cassures par le haut (rendement à 5 et 10 séances, fausse cassure = retour sous la bande de résistance en 10 séances)
 - sorties: etape4.csv, etape4_episodes.csv, etape4_evaluation.csv, etape4_cassures.csv, etape4.png dans data_test, séparateur ";"
 
+## fin du pipeline de détection de range, résistance et breakout de résistance. Les étapes 5 à 7 sont des tests de performance
+
 ## étape 5 : test de performance des positions prises sur cassure confirmée d'un range (position longue uniquement).
 
 - signal (cf. étape 4) : cassure par le haut confirmée = 2 clôtures consécutives (J1, J2) au-dessus du haut de la bande de résistance d'au moins 0,25 × ATR(22).
 Filtre de volume : max(volume J1, volume J2) >= SEUIL_VOLUME × médiane des volumes des 22 séances précédant J1.
 - prise de position : entrée à l'ouverture de J3 (première séance après la cassure confirmée) ;
-- stop de la position: calculé avec les bandes figées à la clôture de J2 :
+- stop de la position: calculé avec les bandes figées à la clôture de J2 : 3 options possible des stops S1 à S3
     S1 = bas de la bande de résistance - 0,25 × ATR(22)     (retour franc dans le range)
     S3 = milieu du range = (haut du support + bas de la résistance) / 2
     S4 = prix d'entrée - 2 × ATR(22)                        (stop de volatilité)
-- stop touché si le plus bas de la séance l'atteint : sortie au stop, ou à l'ouverture si le cours ouvre dessous ;
+stop touché si le plus bas de la séance l'atteint : sortie au stop, ou à l'ouverture si le cours ouvre dessous ;
 - sorties testées (SORTIES) :
     fixe_5 / fixe_10 : sortie à la clôture de la 5e / 10e séance après la séance d'entrée ;
     T1_chandelier : stop suiveur = plus haut atteint depuis l'entrée - 3 × ATR(22) ;
@@ -66,13 +68,40 @@ Filtre de volume : max(volume J1, volume J2) >= SEUIL_VOLUME × médiane des vol
   les stops suiveurs ne font que monter (jamais sous le stop initial), sont recalculés à chaque clôture et
   s'appliquent dès la séance suivante ; durée maximale DUREE_MAX_SUIVEUR séances (sortie à la clôture) ;
 - frais : FRAIS_ALLER_RETOUR du prix d'entrée ; une seule position à la fois par action et par variante.
-Les rendements sont calculés en cours ajustés (dividendes inclus) ; entrée et stop sont aussi donnés en cours bruts,
-niveaux réellement visibles sur le marché (le jour d'un détachement de dividende, un stop en cours brut est à abaisser
-du montant du dividende).
-
+Les rendements sont calculés en cours ajustés (dividendes inclus) ; entrée et stop sont aussi donnés en cours bruts, niveaux réellement visibles sur le marché (le jour d'un détachement de dividende, un stop en cours brut est à abaisser du montant du dividende).
 Points de comparaison :
 - les mêmes cassures sans filtre de volume ;
 - des entrées tirées au hasard dans la même action (hors périodes exclues), avec un stop à la même distance en ATR
   que la position réelle (N_TIRAGES tirages par position) : le signal doit faire mieux que le hasard.
-Robustesse : résultats séparés pour deux moitiés de l'univers (actions A et B, en alternant dans l'ordre alphabétique)
-et pour deux périodes (2020-2023 et 2024-2026).
+Robustesse : résultats séparés pour deux moitiés de l'univers (actions A et B, en alternant dans l'ordre alphabétique) et pour deux périodes (2020-2023 et 2024-2026).
+
+## étape 6 test de performance : entrée sur retour vers la résistance après une cassure confirmée — moitié A de l'univers (=actions côtées au SRD) seulement.
+
+Règle fixée avant tout calcul :
+- signal : cassure par le haut confirmée (étape 4), avec ou sans le filtre de volume de l'étape 5 ;
+- ordre d'achat à cours limité au haut de la bande de résistance (figée à J2), valable de J3 à J3 + 9 (10 séances) :
+  exécuté à l'ouverture si elle est au niveau de l'ordre ou en dessous, sinon au niveau de l'ordre si le plus bas
+  l'atteint ; annulé si une clôture passe sous le stop avant exécution (configuration invalidée) ;
+- stops initiaux S1 / S3 / S4 de l'étape 5 (S4 calculé depuis le prix d'achat) ; le jour de l'achat, si le plus bas
+  atteint aussi le stop, la position est considérée stoppée (hypothèse défavorable : ordre des prix inconnu) ;
+- sorties : fixe_10 et T1_chandelier (cf. etape5.py) ; frais 0,2 % aller-retour ; une position à la fois par action.
+Comparaisons : entrées au hasard (même action, même distance de stop en ATR, même sortie) et entrée à la cassure
+(ouverture de J3, règles de l'étape 5), calculées sur la même moitié A.
+La moitié B de l'univers (une action sur deux dans l'ordre alphabétique) est réservée : elle n'est ni chargée ni
+calculée ici ; elle ne servira qu'une fois, pour confirmer une règle déjà choisie.
+
+## Étape 7 test de performance : filtre de marché sur les cassures — moitié A de l'univers seulement.
+
+Règle fixée avant tout calcul :
+- une cassure confirmée (J2) n'est retenue que si, à la clôture de J2, le CAC 40 (^FCHI) clôture au-dessus de sa
+  moyenne mobile à MOYENNE_MOBILE séances (information connue à J2) ;
+- positions selon les règles de l'étape 5 (entrée à l'ouverture de J3), stops S1 / S3 / S4,
+  sorties fixe_10 et T1_chandelier, avec et sans filtre de volume ;
+- comparaisons : entrées au hasard restreintes aux séances où le marché est haussier (sinon l'effet du filtre se
+  confondrait avec la hausse générale du marché), et les mêmes cassures sans filtre de marché ;
+- critères : R moyen > 0 avant et depuis 2024, R moyen > hasard (marché haussier) et > cassures sans filtre de
+  marché, borne basse de l'IC 95 % > 0.
+La moitié B est réservée (non chargée). Si l'indice ne peut pas être téléchargé, un indice de remplacement
+équipondéré construit sur la moitié A est utilisé, et le résultat n'est alors qu'indicatif.
+
+## bilan des tests de performance dans BILAN.md 
