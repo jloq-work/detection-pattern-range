@@ -1,10 +1,7 @@
 # Projet test: système d'aide à la prise de position sur actions françaises (position longue) sur les breakouts confirmés de range
-- L'idée est de tester sur plusieurs actions françaises la détection de pattern de range sur la période avril 2020 à septembre 2026: Veolia, Vivendi et Airbus pour la phase d'entraînement, sodexo et solution30 pour la phase de test
+- L'idée est de tester sur plusieurs actions françaises la détection de pattern de range sur la période avril 2020 à septembre 2026
 - La détection est réalisée par clusterisation sur des fenêtres glissantes de 2 mois de cotations (22 séances boursières)
-- 3 clusters K-means sont créés selon 3 features calculés par fenêtre glissante: la pente de la tendance, la volatilité, le ratio de consolidation des prix
-- ne sont ensuite retenus que les range significatifs (durée de l'épisode minimale à déterminer), les épisodes de range entrecoupés de courte interruption (à déterminer nombre de séances séances ou moins) sont fusionnés
-- des supports et des résistances sont tracés sur ces épisodes de range
-- à compléter au fur et à mesure de l'avancement de la réflexion avec l'IA
+- ne sont ensuite retenus que les range, resistance et cassures significatifs 
 
 ## étape 1: chargement des données
 - récupérer les actions Veolia, Vivendi, Airbus, Sodexo et Solution30 (symboles Yahoo: VIE.PA, SW.PA, VIV.PA, AIR.PA et S30.PA) via Yahoo finance et l'utilisation de la librarie yfinance dans Python
